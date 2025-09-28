@@ -19,7 +19,9 @@ jobs:
     - name: Check formatting of Rust code with rustfmt
       uses: actions-rust-lang/rustfmt@v1
 
+  # Run clippy validation on PRs (with annotations)
   clippy_check:
+    if: github.event_name == 'pull_request'
     needs: rustfmt
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +31,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
+
+  # Run clippy validation on pushes (no annotations)
+  clippy:
+    if: github.event_name == 'push'
+    needs: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup component add clippy
+      - run: cargo clippy --all-features -- -D warnings
 
   build:
     needs: rustfmt
