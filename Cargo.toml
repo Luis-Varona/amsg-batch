@@ -1,6 +1,12 @@
 [package]
 name = "amsg-batch"
-version = "0.1.0"
+keywords = ["cli", "messaging", "macos", "apple", "applescript"]
+license = "MIT OR Apache-2.0"
+authors = ["Luis M. B. Varona <lm.varona@outlook.com>"]
+description = "A command-line tool to send bulk texts via Apple Messages on macOS."
+readme = "README.md"
+repository = "https://github.com/Luis-Varona/amsg-batch"
+version = "0.1.0-dev"
 edition = "2024"
 
 [dependencies]
