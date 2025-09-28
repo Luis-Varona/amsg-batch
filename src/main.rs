@@ -1,3 +1,10 @@
+// Copyright 2025 Luis M. B. Varona
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+// http://opensource.org/licenses/MIT>, at your option. This file may not be
+// copied, modified, or distributed except according to those terms.
+
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use csv::ReaderBuilder;
@@ -12,12 +19,12 @@ const MAX_NUMBER_LENGTH: usize = 15;
 #[derive(Parser)]
 #[command(
     version,
-    about = "Send bulk texts via Apple Messages",
+    about = "Send bulk texts via Apple Messages on macOS",
     long_about = r#"
-Send bulk texts via Apple Messages, with optional personalization. A `.csv` path containing
-recipients and a `.txt` path containing the message are required. Optionally, the service
-(e.g., iMessage or SMS) and a placeholder for recipient names (replaced with a name every
-time it appears in the message) can also be provided.
+Send bulk texts via Apple Messages on macOS, with optional personalization. A `.csv` path
+containing recipients and a `.txt` path containing the message text are required.
+Optionally, the service (e.g., iMessage or SMS) and a placeholder for recipient names
+(replaced with a name every time it appears in the message) can also be provided.
 
 The CSV file of recipients should have no header and either one or two columns. If
 `--placeholder` (or `-p`) is provided, the first should contain recipient names and the
