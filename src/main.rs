@@ -10,18 +10,54 @@ const MIN_NUMBER_LENGTH: usize = 7;
 const MAX_NUMBER_LENGTH: usize = 15;
 
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(
+    version,
+    about = "Send bulk texts via Apple Messages",
+    long_about = r#"
+Send bulk texts via Apple Messages, with optional personalization. A `.csv` path containing
+recipients and a `.txt` path containing the message are required. Optionally, the service
+(e.g., iMessage or SMS) and a placeholder for recipient names (replaced with a name every
+time it appears in the message) can also be provided.
+
+The CSV file of recipients should have no header and either one or two columns. If
+`--placeholder` (or `-p`) is provided, the first should contain recipient names and the
+second should contain phone numbers. For example:
+
+    Baron von Murderpillow,+1 (234) 567-8910
+    Rt. Hon. John A. Stymers,314159265
+    [...]
+
+If `--placeholder` (or `-p`) is not provided, the CSV should have only a single column
+containing phone numbers, like so:
+
+    +1 (234) 567-8910
+    314159265
+    [...]"#
+)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(
+        short,
+        long,
+        help = "Path to `.csv` file with recipients' numbers and (if applicable) names"
+    )]
     recipients: String,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "Path to `.txt` file with the message to send")]
     message: String,
 
-    #[arg(short, long, default_value_t = String::from(DEFAULT_SERVICE))]
+    #[arg(
+        short,
+        long,
+        help = "Service to use to send messages (e.g., iMessage or SMS)",
+        default_value_t = String::from(DEFAULT_SERVICE)
+    )]
     service: String,
 
-    #[arg(short, long)]
+    #[arg(
+        short,
+        long,
+        help = "(Optional) placeholder to be replaced with recipient name (e.g., {name})"
+    )]
     placeholder: Option<String>,
 }
 
@@ -48,11 +84,11 @@ fn main() -> Result<()> {
                 number: processed_number,
             }),
             Err(e) => {
-                warn!(
-                    "Skipping recipient {} due to invalid number: {}",
-                    r.name.as_deref().unwrap_or("unknown"),
-                    e
-                );
+                if let Some(name) = r.name {
+                    warn!("Skipping recipient {} due to invalid number: {}", name, e);
+                } else {
+                    warn!("Skipping recipient due to invalid number: {}", e);
+                }
                 None
             }
         })
@@ -68,16 +104,18 @@ fn main() -> Result<()> {
         };
 
         if let Err(e) = send_message(&message, &recipient.number, &args.service) {
-            error!(
-                "Failed to send message to {}: {}",
-                recipient.name.as_deref().unwrap_or("unknown"),
-                e
-            );
+            if let Some(name) = &recipient.name {
+                error!(
+                    "Failed to send message to {} ({}): {}",
+                    name, recipient.number, e
+                );
+            } else {
+                error!("Failed to send message to {}: {}", recipient.number, e);
+            }
+        } else if let Some(name) = &recipient.name {
+            info!("Message sent to {} ({})", name, recipient.number);
         } else {
-            info!(
-                "Message sent to {}",
-                recipient.name.as_deref().unwrap_or(&recipient.number)
-            );
+            info!("Message sent to {}", recipient.number);
         }
 
         thread::sleep(DELAY);
