@@ -80,6 +80,7 @@ fn main() -> Result<()> {
 
     validate_file_path(&args.recipients, "csv")?;
     validate_file_path(&args.message, "txt")?;
+    validate_service(&args.service)?;
 
     let has_names = args.placeholder.is_some();
 
@@ -132,6 +133,10 @@ fn main() -> Result<()> {
 }
 
 fn validate_file_path(path: &str, extension: &str) -> Result<()> {
+    if path.is_empty() {
+        bail!("Path must not be empty");
+    }
+
     let path_obj = Path::new(path);
 
     if !path_obj.exists() {
@@ -144,6 +149,21 @@ fn validate_file_path(path: &str, extension: &str) -> Result<()> {
 
     if path_obj.extension().and_then(|ext| ext.to_str()) != Some(extension) {
         bail!("File {} does not end with .{}", path, extension);
+    }
+
+    Ok(())
+}
+
+fn validate_service(service: &str) -> Result<()> {
+    if service.is_empty() {
+        bail!("Service name must not be empty");
+    }
+
+    if !service.chars().all(|c| c.is_ascii_alphabetic()) {
+        bail!(
+            "Invalid (non-alphabetic) characters in service name: {}",
+            service
+        );
     }
 
     Ok(())
