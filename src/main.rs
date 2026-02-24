@@ -286,8 +286,11 @@ fn send_message(message: &str, number: &str, service: &str) -> Result<()> {
 }
 
 fn escape_applescript_string(message: &str) -> String {
+    // Escape backslashes first to avoid double-escaping later replacements
     message
         .replace('\\', "\\\\")
         .replace('"', "\\\"")
         .replace('\n', "\\n")
+        .replace('\t', "\\t")
+        .replace('\r', "\\r")
 }
