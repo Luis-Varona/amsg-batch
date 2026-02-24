@@ -83,51 +83,10 @@ fn main() -> Result<()> {
     validate_service(&args.service)?;
 
     let has_names = args.placeholder.is_some();
-
-    let recipients = read_recipients(&args.recipients, has_names)?
-        .into_iter()
-        .filter_map(|r| match process_number(&r.number) {
-            Ok(processed_number) => Some(Recipient {
-                name: r.name,
-                number: processed_number,
-            }),
-            Err(e) => {
-                if let Some(name) = r.name {
-                    warn!("Skipping recipient {} due to invalid number: {}", name, e);
-                } else {
-                    warn!("Skipping recipient due to invalid number: {}", e);
-                }
-                None
-            }
-        })
-        .collect::<Vec<_>>();
+    let recipients = load_recipients(&args.recipients, has_names)?;
     let template = read_message(&args.message)?;
 
-    for recipient in recipients {
-        let message = if let (Some(name), Some(placeholder)) = (&recipient.name, &args.placeholder)
-        {
-            template.replace(placeholder, name)
-        } else {
-            template.clone()
-        };
-
-        if let Err(e) = send_message(&message, &recipient.number, &args.service) {
-            if let Some(name) = &recipient.name {
-                error!(
-                    "Failed to send message to {} ({}): {}",
-                    name, recipient.number, e
-                );
-            } else {
-                error!("Failed to send message to {}: {}", recipient.number, e);
-            }
-        } else if let Some(name) = &recipient.name {
-            info!("Message sent to {} ({})", name, recipient.number);
-        } else {
-            info!("Message sent to {}", recipient.number);
-        }
-
-        thread::sleep(DELAY);
-    }
+    send_messages(&recipients, &template, &args.placeholder, &args.service);
 
     Ok(())
 }
@@ -167,6 +126,26 @@ fn validate_service(service: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn load_recipients(path: &str, has_names: bool) -> Result<Vec<Recipient>> {
+    Ok(read_recipients(path, has_names)?
+        .into_iter()
+        .filter_map(|r| match process_number(&r.number) {
+            Ok(processed_number) => Some(Recipient {
+                name: r.name,
+                number: processed_number,
+            }),
+            Err(e) => {
+                if let Some(name) = r.name {
+                    warn!("Skipping recipient {} due to invalid number: {}", name, e);
+                } else {
+                    warn!("Skipping recipient due to invalid number: {}", e);
+                }
+                None
+            }
+        })
+        .collect())
 }
 
 fn read_recipients(path: &str, has_names: bool) -> Result<Vec<Recipient>> {
@@ -252,6 +231,38 @@ fn process_number(number: &str) -> Result<String> {
 
 fn read_message(path: &str) -> Result<String> {
     fs::read_to_string(path).context(format!("Failed to read message from {}", path))
+}
+
+fn send_messages(
+    recipients: &[Recipient],
+    template: &str,
+    placeholder: &Option<String>,
+    service: &str,
+) {
+    for recipient in recipients {
+        let message = if let (Some(name), Some(placeholder)) = (&recipient.name, placeholder) {
+            template.replace(placeholder, name)
+        } else {
+            template.to_string()
+        };
+
+        if let Err(e) = send_message(&message, &recipient.number, service) {
+            if let Some(name) = &recipient.name {
+                error!(
+                    "Failed to send message to {} ({}): {}",
+                    name, recipient.number, e
+                );
+            } else {
+                error!("Failed to send message to {}: {}", recipient.number, e);
+            }
+        } else if let Some(name) = &recipient.name {
+            info!("Message sent to {} ({})", name, recipient.number);
+        } else {
+            info!("Message sent to {}", recipient.number);
+        }
+
+        thread::sleep(DELAY);
+    }
 }
 
 fn send_message(message: &str, number: &str, service: &str) -> Result<()> {
